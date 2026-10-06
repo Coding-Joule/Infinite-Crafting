@@ -89,3 +89,40 @@ test("starters exist and world sizes are sensible", () => {
   assert.equal(archetypeFor(CATALOG.get("cat")!).movement, "wander");
   assert.ok(SIZE_PX.huge > SIZE_PX.tiny);
 });
+
+test("no recipe pair is defined twice with different results", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../lib/fallback/recipes.ts", import.meta.url), "utf8");
+  const seen = new Map<string, string>();
+  const conflicts: string[] = [];
+  for (const line of src.split("\n")) {
+    const m = line.trim().match(/^([^+=]+)\+([^=]+)=(.+)$/);
+    if (!m) continue;
+    const key = recipeKey(m[1], m[2]);
+    const result = m[3].trim();
+    if (seen.has(key) && seen.get(key) !== result) conflicts.push(`${key}: ${seen.get(key)} vs ${result}`);
+    seen.set(key, result);
+  }
+  assert.deepEqual(conflicts, []);
+});
+
+test("key items are reachable from the four starters", () => {
+  const have = new Set(STARTER_NAMES.map((n) => itemId(n)));
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const [key, result] of RECIPES) {
+      const [a, b] = key.split("::");
+      const r = itemId(result);
+      if (have.has(a) && have.has(b) && !have.has(r)) {
+        have.add(r);
+        grew = true;
+      }
+    }
+  }
+  for (const target of ["mud", "volcano", "life", "human", "tree", "house", "city", "train", "track", "dragon", "wizard", "sun", "moon", "rain", "car", "black hole", "dinosaur"]) {
+    assert.ok(have.has(target), `${target} is not reachable`);
+  }
+  const unreachable = [...new Set(RECIPES.values())].filter((r) => !have.has(itemId(r)));
+  console.log(`reachable: ${have.size}, unreachable recipe results: ${unreachable.join(", ") || "none"}`);
+});
