@@ -8,6 +8,10 @@ import { setEngine, useDrag } from "@/lib/game/drag";
 import { sfx } from "@/lib/game/sound";
 import { KEYS, loadJSON, saveJSON } from "@/lib/game/persistence";
 import { WORLD, type SavedWorld } from "@/lib/world/types";
+import { useUI } from "@/lib/game/ui";
+import { WorldClock, WorldNews } from "./WorldHud";
+
+const SPEEDS = [1, 3, 10];
 
 export function WorldView({ firstVisit }: { firstVisit: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -15,6 +19,7 @@ export function WorldView({ firstVisit }: { firstVisit: boolean }) {
   const engineRef = useRef<WorldEngine | null>(null);
   const worldCount = useGame((s) => s.worldCount);
   const dayCycle = useGame((s) => s.settings.dayCycle);
+  const speed = useGame((s) => s.settings.speed);
   const overWorld = useDrag((s) => s.overWorld);
   const worldDrag = useDrag((s) => s.worldDrag);
 
@@ -32,8 +37,10 @@ export function WorldView({ firstVisit }: { firstVisit: boolean }) {
       onSound: (name) => sfx(name),
       getTrashRect: () => trashRef.current?.getBoundingClientRect() ?? null,
       onDragObject: (active, overTrash) => useDrag.getState().set({ worldDrag: { active, overTrash } }),
+      onNews: (text) => useUI.getState().pushNews(text),
     });
     engine.dayCycle = useGame.getState().settings.dayCycle;
+    engine.timeScale = useGame.getState().settings.speed;
     engine.load(loadJSON<SavedWorld | null>(KEYS.world, null));
     if (firstVisit && engine.objects.length === 0) {
       // A tiny starting scene so the world never feels empty.
@@ -54,6 +61,15 @@ export function WorldView({ firstVisit }: { firstVisit: boolean }) {
   useEffect(() => {
     if (engineRef.current) engineRef.current.dayCycle = dayCycle;
   }, [dayCycle]);
+
+  useEffect(() => {
+    if (engineRef.current) engineRef.current.timeScale = speed;
+  }, [speed]);
+
+  const cycleSpeed = () => {
+    const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+    useGame.getState().setSettings({ speed: next });
+  };
 
   const zoom = (f: number) => engineRef.current?.zoomBy(f);
 
@@ -78,7 +94,18 @@ export function WorldView({ firstVisit }: { firstVisit: boolean }) {
         <button onClick={() => engineRef.current?.resetCamera()} aria-label="Reset camera" title="Reset camera">
           ⌖
         </button>
+        <button
+          className={"speed" + (speed > 1 ? " is-fast" : "")}
+          onClick={cycleSpeed}
+          aria-label={`Simulation speed ${speed}x`}
+          title="Simulation speed"
+        >
+          {speed === 1 ? "▶" : speed === 3 ? "⏩" : "⏭"}
+          <small>{speed}×</small>
+        </button>
       </div>
+      <WorldClock />
+      <WorldNews />
       <div
         ref={trashRef}
         className={"world__trash" + (worldDrag.active ? " is-visible" : "") + (worldDrag.overTrash ? " is-hot" : "")}

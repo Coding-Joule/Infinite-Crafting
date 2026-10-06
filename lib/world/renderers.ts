@@ -875,7 +875,8 @@ const fire: Renderer = ({ ctx, item, arch, o, t, has }) => {
     }
     return;
   }
-  const doused = Math.min(1, (o.state.doused ?? 0) / 3);
+  // Shrinks while being doused and as the fuel runs out.
+  const doused = Math.max(Math.min(1, (o.state.doused ?? 0) / 3), o.state.fuel !== undefined ? 1 - Math.min(1, o.state.fuel / 25) : 0);
   if (item.category === "structure" || item.size !== "tiny") {
     ctx.fillStyle = "#6b4426";
     ctx.save();

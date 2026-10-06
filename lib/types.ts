@@ -67,6 +67,8 @@ export const TRAITS = [
   "night", // darkens the world
   "electric", // sparks, lightning
   "heavy", // does not move
+  "predator", // hunts other creatures
+  "aquatic", // can only live in water (fish)
 ] as const;
 export type Trait = (typeof TRAITS)[number];
 

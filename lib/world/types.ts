@@ -28,8 +28,21 @@ export interface ObjState {
   goalY?: number;
   pause?: number;
   occupants?: number; // building: creatures inside
-  intent?: "enter" | "ride" | "eat" | "douse";
+  intent?: "enter" | "ride" | "eat" | "douse" | "sleep";
   targetId?: string;
+  // --- life simulation (living creatures) ---
+  hp?: number; // health 0..100
+  food?: number; // fullness 0..100
+  rest?: number; // energy 0..100
+  age?: number; // in world days
+  sleeping?: boolean;
+  homeId?: string; // shelter a person returns to at night
+  lastBred?: number; // world time
+  giveUpAt?: number; // world time to abandon a chase
+  activity?: string; // short label shown in the inspector
+  // --- plants / fire ---
+  regrow?: number; // seconds since a plant was burnt
+  fuel?: number; // seconds of fuel left for fires
 }
 
 export interface WorldObject {
@@ -52,7 +65,7 @@ export interface Particle {
   max: number;
   size: number;
   color: string;
-  kind: "puff" | "spark" | "ember" | "drop" | "heart" | "star" | "ring";
+  kind: "puff" | "spark" | "ember" | "drop" | "heart" | "star" | "ring" | "ghost" | "zzz";
   gravity?: number;
 }
 
@@ -62,4 +75,5 @@ export interface SavedWorld {
   camera: { x: number; y: number; zoom: number };
   time: number;
   dayClock: number;
+  day?: number;
 }

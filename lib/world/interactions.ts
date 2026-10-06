@@ -64,8 +64,10 @@ const burning: Matcher = (o) => (o.state.burning ?? 0) > 0;
 const isRaining: Matcher = (o, i) => i.worldType === "weather" && (i.traits.includes("wet") || (o.state.raining ?? 0) > 0);
 const flammable = and(visible, trait("flammable"), (o) => !o.state.charred && !((o.state.burning ?? 0) > 0));
 const hotSource = and(visible, onGround, (o, i) => (i.traits.includes("hot") && i.worldType !== "weather") || (o.state.burning ?? 0) > 0);
-const walker = and(visible, type("human"), (o, _i, s) => s.arch(o).movement === "wander", (o) => !o.state.intent);
-const creature = and(visible, trait("living"), (o, _i, s) => s.arch(o).movement === "wander");
+const awake: Matcher = (o) => !o.state.sleeping;
+const walker = and(visible, awake, type("human"), (o, _i, s) => s.arch(o).movement === "wander", (o) => !o.state.intent);
+const anyCreature = and(visible, trait("living"), (o, _i, s) => s.arch(o).movement === "wander");
+const creature = and(anyCreature, awake);
 const waterBody = and(type("water"), notTrait("hot"));
 
 export const INTERACTION_RULES: InteractionRule[] = [
@@ -163,11 +165,12 @@ export const INTERACTION_RULES: InteractionRule[] = [
   {
     id: "flee-fire",
     a: hotSource,
-    b: and(creature, notTrait("wet")),
+    b: and(anyCreature, notTrait("wet")),
     mode: "near",
     range: 140,
     chance: 4,
     effect: (_s, a, b) => {
+      b.state.sleeping = false; // fire wakes you up
       if (b.state.intent) return;
       b.state.fleeing = 2.5;
       b.state.goalX = b.x + Math.sign(b.x - a.x || 1) * 260;
@@ -193,25 +196,11 @@ export const INTERACTION_RULES: InteractionRule[] = [
     a: walker,
     b: and(visible, trait("rideable"), (o) => !o.state.riderId),
     mode: "near",
-    range: 300,
-    chance: 0.12,
+    range: 500,
+    chance: 0.08,
     effect: (_s, a, b) => {
       b.state.riderId = a.id; // reserve
       a.state.intent = "ride";
-      a.state.targetId = b.id;
-      a.state.goalX = b.x;
-      a.state.goalY = b.y + 2;
-    },
-  },
-  {
-    id: "eat-food",
-    a: and(creature, (o) => !o.state.intent),
-    b: and(visible, type("food"), trait("edible"), notTrait("seed")),
-    mode: "near",
-    range: 200,
-    chance: 0.06,
-    effect: (_s, a, b) => {
-      a.state.intent = "eat";
       a.state.targetId = b.id;
       a.state.goalX = b.x;
       a.state.goalY = b.y + 2;

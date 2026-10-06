@@ -17,6 +17,7 @@ export interface BenchChip {
 export interface Settings {
   muted: boolean;
   dayCycle: boolean;
+  speed: number;
 }
 
 export interface Toast {
@@ -68,6 +69,14 @@ function starters(): Record<string, Discovery> {
  */
 function refreshOfflineTraits(all: Record<string, Discovery>): Record<string, Discovery> {
   for (const d of Object.values(all)) {
+    // Built-in items follow the current catalog (sizes, categories, behavior traits).
+    const known = catalogItem(d.name);
+    if (known && known.id === d.id) {
+      if (known.category !== d.category || known.size !== d.size || known.traits.some((t) => !d.traits.includes(t))) {
+        all[d.id] = { ...d, category: known.category, size: known.size, traits: Array.from(new Set([...d.traits, ...known.traits])) };
+      }
+      continue;
+    }
     if (!d.from) continue;
     const [a, b] = d.from.map((id) => all[id]);
     if (!a || !b) continue;
@@ -86,7 +95,7 @@ export const useGame = create<GameState>((set, get) => ({
   discoveries: starters(),
   recipes: {},
   favorites: {},
-  settings: { muted: false, dayCycle: true },
+  settings: { muted: false, dayCycle: true, speed: 1 },
   bench: [],
   toasts: [],
   selectedObjectId: null,
@@ -101,7 +110,7 @@ export const useGame = create<GameState>((set, get) => ({
       discoveries: refreshOfflineTraits({ ...starters(), ...saved }),
       recipes: loadJSON(KEYS.recipes, {}),
       favorites: loadJSON(KEYS.favorites, {}),
-      settings: { muted: false, dayCycle: true, ...loadJSON<Partial<Settings>>(KEYS.settings, {}) },
+      settings: { muted: false, dayCycle: true, speed: 1, ...loadJSON<Partial<Settings>>(KEYS.settings, {}) },
       bench: loadJSON<BenchChip[]>(KEYS.bench, []).map((c) => ({ ...c, pending: false })),
     });
   },

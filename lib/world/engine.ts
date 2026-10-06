@@ -8,6 +8,8 @@ import {
   type Archetype,
 } from "./archetypes";
 import { INTERACTION_RULES, type Sim } from "./interactions";
+import { DAY_LENGTH, ageScale, growthScale, isLiving, isPlantLife } from "./life";
+import { LifeSystem, type LifeHost } from "./lifeSystem";
 import { RENDERERS, drawBurning } from "./renderers";
 import { hashString, mix, rand, rgba } from "./sprites";
 import { WORLD, type Particle, type SavedWorld, type WorldObject } from "./types";
@@ -23,6 +25,8 @@ export interface EngineOptions {
   /** screen rect of the trash zone (client coords), if visible */
   getTrashRect?: () => DOMRect | null;
   onDragObject?: (dragging: boolean, overTrash: boolean) => void;
+  /** Something noteworthy happened (births, deaths, fires…). */
+  onNews?: (text: string) => void;
 }
 
 interface Camera {
@@ -40,15 +44,19 @@ interface PointerInfo {
 }
 
 const DWELL = 0.5; // seconds hovering over another object before a drop combines
-const DAY_LENGTH = 300; // seconds for a full day/night cycle
-
-export class WorldEngine implements Sim {
+export class WorldEngine implements Sim, LifeHost {
   objects: WorldObject[] = [];
   private byId = new Map<string, WorldObject>();
   private particles: Particle[] = [];
   time = 0;
   dayClock = 0.08;
+  /** Number of completed days. */
+  day = 1;
   dayCycle = true;
+  /** Simulation speed multiplier (1 = real time). */
+  timeScale = 1;
+  readonly life: LifeSystem = new LifeSystem(this);
+  private lastNews = new Map<string, number>();
   private light = 1;
   private cam: Camera = { x: WORLD.W / 2, y: WORLD.HORIZON - 80, zoom: 0.6 };
   private target: Camera = { ...this.cam };
@@ -110,6 +118,10 @@ export class WorldEngine implements Sim {
     return !!this.item(o)?.traits.includes(t);
   }
   emit(x: number, y: number, kind: Particle["kind"], count: number, color = "#ffffff") {
+    if (kind === "zzz") {
+      if (this.particles.length < 700) this.particles.push({ x, y, vx: 6, vy: -22, life: 0, max: 1.8, size: 10, color, kind });
+      return;
+    }
     for (let i = 0; i < count && this.particles.length < 700; i++) {
       const a = Math.random() * Math.PI * 2;
       const sp = kind === "puff" ? 20 + Math.random() * 30 : kind === "spark" || kind === "star" ? 80 + Math.random() * 160 : 30 + Math.random() * 40;
@@ -160,8 +172,85 @@ export class WorldEngine implements Sim {
     this.opts.onSound?.(name);
   }
 
+  // ------------------------------------------------------------------ LifeHost API
+  get(id: string) {
+    return this.byId.get(id);
+  }
+  isNight() {
+    return this.light < 0.4;
+  }
+  isDragging(o: WorldObject) {
+    return this.drag?.id === o.id && this.drag.moved;
+  }
+  news(text: string) {
+    const last = this.lastNews.get(text) ?? -1e9;
+    if (this.time - last < 4) return;
+    this.lastNews.set(text, this.time);
+    if (this.lastNews.size > 200) this.lastNews.clear();
+    this.opts.onNews?.(text);
+  }
+  spawnAt(itemId: string, x: number, y: number): WorldObject | null {
+    const id = this.spawn(itemId, x, y, { quiet: true });
+    return id ? this.byId.get(id) ?? null : null;
+  }
+  kill(o: WorldObject, cause: string) {
+    if (!this.byId.has(o.id)) return;
+    const item = this.item(o);
+    const arch = this.arch(o);
+    this.particles.push({ x: o.x, y: o.y - arch.h * 0.6, vx: 0, vy: -35, life: 0, max: 2.2, size: Math.max(22, arch.h * 0.6), color: "#ffffff", kind: "ghost" });
+    this.emit(o.x, o.y - arch.h * 0.3, "puff", 6, "#e8e8f0");
+    this.sound("pop");
+    if (item) this.news(`💀 ${/^[aeiou]/i.test(item.name) ? "An" : "A"} ${item.name} ${cause}`);
+    const host = o.state.insideId ? this.byId.get(o.state.insideId) : undefined;
+    if (host) {
+      if (host.state.occupants) host.state.occupants = Math.max(0, host.state.occupants - 1);
+      if (host.state.riderId === o.id) {
+        host.state.riderId = undefined;
+        host.state.riderItemId = undefined;
+      }
+    }
+    this.removeById(o.id);
+  }
+  enter(o: WorldObject, host: WorldObject) {
+    o.state.hidden = true;
+    o.state.insideId = host.id;
+    o.state.exitAt = undefined;
+    o.state.goalX = o.state.goalY = undefined;
+    host.state.occupants = (host.state.occupants ?? 0) + 1;
+  }
+  exit(o: WorldObject) {
+    this.exitShelter(o);
+  }
+
+  /** World-space bounds including age/growth scaling. */
+  bounds(o: WorldObject) {
+    const b = boundsOf(this.arch(o), o.x, o.y);
+    const k = this.lifeScale(o);
+    if (k === 1) return b;
+    const arch = this.arch(o);
+    const w = b.w * k;
+    const h = b.h * k;
+    return arch.anchor === "foot"
+      ? { x: o.x - w / 2, y: o.y - h, w, h, scale: b.scale * k }
+      : { x: o.x - w / 2, y: o.y - h / 2, w, h, scale: b.scale * k };
+  }
+
+  private lifeScale(o: WorldObject): number {
+    const it = this.item(o);
+    if (!it) return 1;
+    if (isLiving(it)) return ageScale(o.state.age);
+    if (isPlantLife(it)) return growthScale(o.state.growth);
+    return 1;
+  }
+
+  /** Hours and minutes of the in-game clock (noon = dayClock 0). */
+  clock(): { day: number; hours: number; minutes: number; night: boolean } {
+    const total = ((this.dayClock * 24 + 12) % 24 + 24) % 24;
+    return { day: this.day, hours: Math.floor(total), minutes: Math.floor((total % 1) * 60), night: this.isNight() };
+  }
+
   // ------------------------------------------------------------------ public API
-  spawn(itemId: string, x?: number, y?: number, opts: { burst?: boolean; select?: boolean } = {}): string | null {
+  spawn(itemId: string, x?: number, y?: number, opts: { burst?: boolean; select?: boolean; quiet?: boolean } = {}): string | null {
     const item = this.opts.getItem(itemId);
     if (!item) return null;
     const arch = archetypeFor(item);
@@ -183,6 +272,10 @@ export class WorldEngine implements Sim {
       state: {},
     };
     this.add(o);
+    if (opts.quiet) {
+      this.emit(px, py - 10, "star", 4, "#ffffff");
+      return o.id;
+    }
     if (opts.burst) {
       this.emit(px, py - arch.h * 0.4, "star", 18, item.color);
       this.emit(px, py - arch.h * 0.4, "spark", 10, "#fff6b0");
@@ -250,11 +343,16 @@ export class WorldEngine implements Sim {
         delete st.riderId;
         delete st.riderItemId;
         delete st.occupants;
+        delete st.giveUpAt;
+        delete st.insideId;
+        delete st.exitAt;
+        if (st.hidden) st.sleeping = false;
         st.hidden = false;
         this.add({ ...s, state: st, born: -10 });
       }
       this.time = saved.time || 0;
       this.dayClock = saved.dayClock ?? 0.08;
+      this.day = saved.day ?? 1;
       if (saved.camera) {
         this.cam = { ...saved.camera, zoom: this.clampZoom(saved.camera.zoom) };
         this.target = { ...this.cam };
@@ -273,6 +371,7 @@ export class WorldEngine implements Sim {
       camera: { ...this.target },
       time: this.time,
       dayClock: this.dayClock,
+      day: this.day,
     };
   }
 
@@ -421,7 +520,7 @@ export class WorldEngine implements Sim {
   screenRectOf(id: string): { x: number; y: number; w: number; h: number } | null {
     const o = this.byId.get(id);
     if (!o) return null;
-    const b = boundsOf(this.arch(o), o.x, o.y);
+    const b = this.bounds(o);
     const [x, y] = this.toScreen(b.x, b.y);
     return { x, y, w: b.w * this.cam.zoom, h: b.h * this.cam.zoom };
   }
@@ -439,7 +538,7 @@ export class WorldEngine implements Sim {
     for (let i = list.length - 1; i >= 0; i--) {
       const o = list[i];
       if (o.id === exclude || o.state.hidden) continue;
-      const b = boundsOf(this.arch(o), o.x, o.y);
+      const b = this.bounds(o);
       const pad = 6 / this.cam.zoom;
       if (wx >= b.x - pad && wx <= b.x + b.w + pad && wy >= b.y - pad && wy <= b.y + b.h + pad) return o;
     }
@@ -705,23 +804,39 @@ export class WorldEngine implements Sim {
     if (this.destroyed) return;
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
-    this.update(dt);
+    this.updateCamera(dt);
+    let sim = dt * this.timeScale;
+    while (sim > 1e-6) {
+      const step = Math.min(0.05, sim);
+      this.update(step);
+      sim -= step;
+    }
     this.render();
     this.raf = requestAnimationFrame(this.frame);
   };
 
-  private update(dt: number) {
-    this.time += dt;
-    if (this.dayCycle) this.dayClock = (this.dayClock + dt / DAY_LENGTH) % 1;
-
-    // smooth camera
+  private updateCamera(dt: number) {
     this.clampCam(this.target);
     const k = 1 - Math.pow(0.0005, dt);
     this.cam.x += (this.target.x - this.cam.x) * k;
     this.cam.y += (this.target.y - this.cam.y) * k;
     this.cam.zoom += (this.target.zoom - this.cam.zoom) * k;
+  }
 
-    for (const o of this.objects) this.updateObject(o, dt);
+  private update(dt: number) {
+    this.time += dt;
+    if (this.dayCycle) {
+      const before = this.dayClock;
+      this.dayClock = (this.dayClock + dt / DAY_LENGTH) % 1;
+      // A new day starts at sunrise (dayClock 0.75 ≈ 6:00).
+      if (before < 0.75 && this.dayClock >= 0.75) {
+        this.day++;
+        this.news(`🌅 Day ${this.day} begins`);
+      }
+    }
+
+    for (const o of [...this.objects]) this.updateObject(o, dt);
+    this.life.update(dt);
 
     this.ruleTimer += dt;
     if (this.ruleTimer >= 0.25) {
@@ -795,6 +910,7 @@ export class WorldEngine implements Sim {
           (v) => v !== o && Math.abs(v.x - o.x) < arch.w * 0.45 && this.has(v, "flammable") && !v.state.hidden,
         );
         if (victims.length) this.ignite(victims[Math.floor(Math.random() * victims.length)]);
+        this.life.strike(o.x + (rand(Math.floor(st.boltAt * 10)) - 0.5) * arch.w * 0.6);
       }
     }
 
@@ -803,7 +919,12 @@ export class WorldEngine implements Sim {
       if (st.exitAt !== undefined && this.time >= st.exitAt) this.exitShelter(o);
       else if (st.insideId) {
         const host = this.byId.get(st.insideId);
-        if (host) {
+        if (host && (host.state.burning ?? 0) > 0) {
+          st.sleeping = false;
+          this.exitShelter(o);
+          st.fleeing = 2;
+          this.news(`🔥 Everyone is running out of the burning ${this.item(host)?.name ?? "building"}!`);
+        } else if (host) {
           o.x = host.x;
           o.y = host.y + 4;
         } else this.exitShelter(o);
@@ -819,14 +940,15 @@ export class WorldEngine implements Sim {
       case "fly":
         this.fly(o, arch, dt);
         break;
+      // Real vehicles don't move without a driver.
       case "drive":
-        this.driveAlong(o, arch, dt, 0, WORLD.W, st.riderItemId ? 1.8 : 1);
+        if (st.riderItemId) this.driveAlong(o, arch, dt, 0, WORLD.W, 1.6);
         break;
       case "sail":
-        this.sail(o, arch, dt);
+        if (st.riderItemId) this.sail(o, arch, dt);
         break;
       case "rails":
-        this.rails(o, arch, dt);
+        if (st.riderItemId) this.rails(o, arch, dt);
         break;
       case "drift": {
         o.x += arch.speed * o.dir * dt * (0.6 + rand(o.seed) * 0.8);
@@ -841,15 +963,24 @@ export class WorldEngine implements Sim {
 
   private wander(o: WorldObject, arch: Archetype, item: ItemDef, dt: number) {
     const st = o.state;
+    if (st.sleeping) return;
     if (st.goalX === undefined || st.goalY === undefined) {
       if ((st.pause ?? 0) > 0) {
         st.pause = (st.pause ?? 0) - dt;
         return;
       }
-      // Swimmers prefer water if any exists.
+      const goal = isLiving(item) ? this.life.wanderGoal(o, item, arch) : null;
+      if (isLiving(item)) {
+        if (!goal) {
+          st.pause = 1 + Math.random() * 2;
+          return;
+        }
+        [st.goalX, st.goalY] = goal;
+      }
       let gx = o.x + (Math.random() - 0.5) * 420;
       let gy = o.y + (Math.random() - 0.5) * 140;
-      if (item.traits.includes("swimming")) {
+      if (goal) [gx, gy] = goal;
+      else if (item.traits.includes("swimming")) {
         const pools = this.objects.filter((w) => this.item(w)?.worldType === "water");
         if (pools.length) {
           const pool = pools.reduce((a, b) => (Math.abs(a.x - o.x) < Math.abs(b.x - o.x) ? a : b));
@@ -863,7 +994,10 @@ export class WorldEngine implements Sim {
     const dx = st.goalX - o.x;
     const dy = st.goalY - o.y;
     const d = Math.hypot(dx, dy);
-    const speed = arch.speed * ((st.fleeing ?? 0) > 0 ? 2.4 : 1) * (st.intent ? 1.3 : 1);
+    const target = st.targetId ? this.byId.get(st.targetId) : undefined;
+    const hunting = st.intent === "eat" && !!target && isLiving(this.item(target) ?? FALLBACK_ITEM);
+    const babySlow = (st.age ?? 2) < 1 ? 0.7 : 1;
+    const speed = arch.speed * babySlow * ((st.fleeing ?? 0) > 0 ? 2.1 : hunting ? 2.5 : st.intent ? 1.3 : 1);
     if (d < 6) {
       st.goalX = st.goalY = undefined;
       if (st.intent) this.completeIntent(o);
@@ -901,19 +1035,22 @@ export class WorldEngine implements Sim {
     st.intent = undefined;
     st.targetId = undefined;
     if (!t) return;
+    if (intent && this.life.arrive(o, intent, t)) return;
     if (intent === "enter") {
       st.hidden = true;
       st.insideId = t.id;
       st.exitAt = this.time + 6 + Math.random() * 8;
       t.state.occupants = (t.state.occupants ?? 0) + 1;
+      st.activity = `Visiting the ${this.item(t)?.name ?? "building"}`;
       this.emit(t.x, t.y - 20, "heart", 1, "#ff6b8a");
     } else if (intent === "ride") {
       if (t.state.riderId && t.state.riderId !== o.id) return;
       st.hidden = true;
       st.insideId = t.id;
-      st.exitAt = this.time + 10 + Math.random() * 10;
+      st.exitAt = this.time + 18 + Math.random() * 22;
       t.state.riderId = o.id;
       t.state.riderItemId = o.itemId;
+      st.activity = `Driving the ${this.item(t)?.name ?? "vehicle"}`;
       this.sound("pop");
     } else if (intent === "douse") {
       this.emit(t.x, t.y - 30, "drop", 10, "#8fc8ff");
@@ -922,11 +1059,6 @@ export class WorldEngine implements Sim {
       if ((t.state.burning ?? 0) > 0) t.state.burning = 0;
       else if (this.item(t)?.worldType === "fire") this.removeById(t.id);
       st.pause = 0.6;
-    } else if (intent === "eat") {
-      this.emit(t.x, t.y - 20, "heart", 1, "#ff6b8a");
-      this.sound("munch");
-      this.removeById(t.id);
-      st.heart = this.time;
     }
   }
 
@@ -1070,6 +1202,7 @@ export class WorldEngine implements Sim {
     const [x0, y0] = this.toWorld(0, 0);
     const [x1, y1] = this.toWorld(vw, vh);
     this.drawBackdrop(ctx, x0, y0, x1, y1, dark);
+    this.drawSnowCover(ctx);
 
     const list = this.sorted();
     const pxScale = dpr * cam.zoom;
@@ -1083,13 +1216,19 @@ export class WorldEngine implements Sim {
       const item = this.item(o);
       if (!item) continue;
       const arch = archetypeFor(item);
-      const b = boundsOf(arch, o.x, o.y);
+      const b = this.bounds(o);
       if (b.x > x1 + 200 || b.x + b.w < x0 - 200 || b.y > y1 + 300 || b.y + b.h < y0 - 300) continue;
       const age = this.time - o.born;
       const pop = age < 0.35 ? 0.6 + 0.4 * easeOutBack(age / 0.35) : 1;
       ctx.save();
       ctx.translate(o.x, o.y);
       ctx.scale(b.scale * pop, b.scale * pop);
+      if (o.state.sleeping) {
+        // Lying down.
+        ctx.translate(0, -arch.h * 0.12);
+        ctx.rotate(o.dir * -Math.PI * 0.42);
+        ctx.translate(0, arch.h * 0.2);
+      }
       if (o.state.pending) ctx.globalAlpha = 0.55 + 0.25 * Math.sin(this.time * 8);
       const moving = o.state.goalX !== undefined || arch.movement === "drive" || arch.movement === "rails" || arch.movement === "sail";
       try {
@@ -1125,8 +1264,7 @@ export class WorldEngine implements Sim {
         if (!item) continue;
         const glow = (o.state.burning ?? 0) > 0 || item.worldType === "fire" || (item.traits.includes("light") && item.worldType !== "celestial") || (item.worldType === "building" && !o.state.charred);
         if (!glow) continue;
-        const arch = archetypeFor(item);
-        const b = boundsOf(arch, o.x, o.y);
+        const b = this.bounds(o);
         const cx = b.x + b.w / 2;
         const cy = b.y + b.h * 0.5;
         const r = Math.max(60, Math.max(b.w, b.h) * (item.worldType === "building" ? 0.8 : 1.4));
@@ -1242,6 +1380,25 @@ export class WorldEngine implements Sim {
     }
   }
 
+  /** Snow builds up on the ground under snowy weather. */
+  private drawSnowCover(ctx: CanvasRenderingContext2D) {
+    for (const o of this.objects) {
+      const it = this.item(o);
+      if (!it || it.worldType !== "weather" || !it.traits.includes("cold")) continue;
+      const w = this.arch(o).w;
+      const cover = Math.min(1, Math.max(0, this.time - o.born) / 40);
+      if (cover <= 0) continue;
+      const g = ctx.createRadialGradient(o.x, WORLD.HORIZON + 260, 10, o.x, WORLD.HORIZON + 260, w * 0.75);
+      g.addColorStop(0, `rgba(250,253,255,${0.85 * cover})`);
+      g.addColorStop(0.7, `rgba(245,250,255,${0.6 * cover})`);
+      g.addColorStop(1, "rgba(245,250,255,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(o.x, WORLD.HORIZON + 260, w * 0.75, 330, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   private drawParticles(ctx: CanvasRenderingContext2D) {
     for (const p of this.particles) {
       const k = p.life / p.max;
@@ -1258,6 +1415,21 @@ export class WorldEngine implements Sim {
           ctx.font = `${p.size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
           ctx.textAlign = "center";
           ctx.fillText("❤️", p.x, p.y);
+          ctx.globalAlpha = 1;
+          break;
+        case "ghost":
+          ctx.globalAlpha = Math.min(1, alpha * 1.4);
+          ctx.font = `${p.size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("👻", p.x + Math.sin(p.life * 4) * 6, p.y);
+          ctx.globalAlpha = 1;
+          break;
+        case "zzz":
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `bold ${10 + p.life * 8}px ui-rounded, system-ui, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.fillText("z", p.x + Math.sin(p.life * 3) * 5, p.y);
           ctx.globalAlpha = 1;
           break;
         case "star":
@@ -1283,7 +1455,7 @@ export class WorldEngine implements Sim {
     // Selection.
     const sel = this.selectedId ? this.byId.get(this.selectedId) : null;
     if (sel && !sel.state.hidden) {
-      const b = boundsOf(this.arch(sel), sel.x, sel.y);
+      const b = this.bounds(sel);
       const pad = 8 / z;
       ctx.strokeStyle = "rgba(255,255,255,0.95)";
       ctx.lineWidth = 2.5 / z;
@@ -1303,7 +1475,7 @@ export class WorldEngine implements Sim {
     // Combine target ring.
     const ct = this.combineTarget ? this.byId.get(this.combineTarget.id) : null;
     if (ct) {
-      const b = boundsOf(this.arch(ct), ct.x, ct.y);
+      const b = this.bounds(ct);
       const cx = b.x + b.w / 2;
       const cy = b.y + b.h / 2;
       const r = Math.max(b.w, b.h) * 0.6 + 10 / z;
@@ -1345,7 +1517,7 @@ export class WorldEngine implements Sim {
 
   private label(ctx: CanvasRenderingContext2D, o: WorldObject, text: string, color = "#ffffff") {
     const z = this.cam.zoom;
-    const b = boundsOf(this.arch(o), o.x, o.y);
+    const b = this.bounds(o);
     const fs = 13 / z;
     ctx.font = `600 ${fs}px ui-rounded, system-ui, sans-serif`;
     const tw = ctx.measureText(text).width;

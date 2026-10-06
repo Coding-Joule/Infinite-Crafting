@@ -55,21 +55,21 @@ Chef|🧑‍🍳|human|small|people|#f4f4f4|living|A master of food.
 Robot|🤖|machine|small|tech|#9aa7b8|electric|A thinking machine.
 Animal|🐾|animal|small|life|#b88a5a|living|A wild creature.
 Dog|🐕|animal|small|life|#c08a4a|living|A loyal friend.
-Cat|🐈|animal|small|life|#e6a04a|living|Independent and fluffy.
-Fish|🐟|animal|tiny|life|#4aa3d8|living,swimming,edible|A slippery swimmer.
+Cat|🐈|animal|small|life|#e6a04a|living,predator|Independent and fluffy.
+Fish|🐟|animal|tiny|life|#4aa3d8|living,swimming,edible,aquatic|A slippery swimmer.
 Bird|🐦|animal|tiny|life|#4a90d9|living,flying|A feathered flyer.
 Chicken|🐔|animal|tiny|life|#f2f2f2|living,edible|Clucks and lays eggs.
 Egg|🥚|food|tiny|food|#f6eedc|edible,seed|Something might hatch.
-Cow|🐄|animal|small|life|#f5f5f5|living|Gives milk, says moo.
+Cow|🐄|animal|medium|life|#f5f5f5|living|Gives milk, says moo.
 Horse|🐎|animal|medium|life|#8b5a2b|living,rideable|Fast and strong.
 Sheep|🐑|animal|small|life|#f2efe8|living|Fluffy and woolly.
-Dragon|🐉|animal|large|magic|#3fae5a|living,flying,hot|A winged fire-breathing legend.
-Dinosaur|🦖|animal|large|life|#5f9a4a|living,heavy|An ancient giant lizard.
-Whale|🐋|animal|large|life|#4a7ab8|living,swimming|The giant of the sea.
-Shark|🦈|animal|medium|life|#7f97ad|living,swimming|Fins and teeth.
+Dragon|🐉|animal|large|magic|#3fae5a|living,flying,hot,predator|A winged fire-breathing legend.
+Dinosaur|🦖|animal|large|life|#5f9a4a|living,heavy,predator|An ancient giant lizard.
+Whale|🐋|animal|large|life|#4a7ab8|living,swimming,aquatic|The giant of the sea.
+Shark|🦈|animal|medium|life|#7f97ad|living,swimming,aquatic,predator|Fins and teeth.
 Butterfly|🦋|animal|tiny|life|#5ab0f0|living,flying|Delicate fluttering wings.
 Bee|🐝|animal|tiny|life|#f2c12e|living,flying|Busy maker of honey.
-Snake|🐍|animal|small|life|#6a9a3c|living|Slithers silently.
+Snake|🐍|animal|small|life|#6a9a3c|living,predator|Slithers silently.
 Lizard|🦎|animal|tiny|life|#7ab648|living|A sun-loving reptile.
 Turtle|🐢|animal|small|life|#5c8a4a|living,swimming|Slow and steady.
 Frog|🐸|animal|tiny|life|#5cbf4a|living,swimming|Hops and croaks.
@@ -77,7 +77,7 @@ Penguin|🐧|animal|small|life|#2b2f3a|living,swimming,cold|A tuxedoed swimmer.
 Unicorn|🦄|animal|medium|magic|#f2b8e6|living,rideable,light|A horse with a magic horn.
 Phoenix|🐦‍🔥|animal|medium|magic|#ff6a1a|living,flying,hot,light|Reborn from its own ashes.
 Monkey|🐒|animal|small|life|#a0703c|living|Playful and clever.
-Bear|🐻|animal|medium|life|#7a4f2a|living|Big, furry and strong.
+Bear|🐻|animal|medium|life|#7a4f2a|living,predator|Big, furry and strong.
 Sun|☀️|celestial|large|space|#ffd34d|light,hot|The bright star of day.
 Moon|🌙|celestial|medium|space|#e9e6d8|night,cold|The silver light of night.
 Star|⭐|celestial|small|space|#fff2a8|light|A distant burning sun.
@@ -136,7 +136,7 @@ Lamp|💡|decoration|small|tech|#ffe9a0|light,electric|A little light in the dar
 Lighthouse|🗼|building|large|structure|#f0f0f0|light,shelter,heavy|Guides ships home.
 Windmill|🌬️|machine|large|structure|#e8dcc8|heavy|Turns wind into work.
 Farm|🚜|building|large|place|#c98a4a|shelter,heavy|Fields, barns and crops.
-Field|🌾|plant|medium|nature|#d9b44a|flammable,edible|Rows of golden grain.
+Field|🌾|plant|medium|food|#d9b44a|flammable,edible|Rows of golden grain.
 Wheat|🌾|plant|small|food|#e0bf5a|flammable,edible|Grain for bread.
 Bread|🍞|food|tiny|food|#d9a25a|edible|Fresh from the oven.
 Apple|🍎|food|tiny|food|#e0443c|edible|Crisp and red.
@@ -149,12 +149,12 @@ Cake|🍰|food|small|food|#f5c6d6|edible|Sweet, layered celebration.
 Soup|🍲|food|small|food|#d9763a|edible,hot|Warm comfort in a bowl.
 Coffee|☕|food|tiny|food|#6f4a2e|edible,hot|Liquid morning.
 Flower|🌸|plant|tiny|nature|#f28ab2|flammable,edible|A bloom of color.
-Mushroom|🍄|plant|tiny|nature|#d9443c|edible|A fungus with a cap.
+Mushroom|🍄|plant|tiny|food|#d9443c|edible|A fungus with a cap.
 Cactus|🌵|plant|small|nature|#4a9a4a||Prickly desert survivor.
 Grass|🌿|plant|small|nature|#5cb85c|flammable,edible|Soft green ground cover.
 Vine|🌿|plant|small|nature|#4a9a3c|flammable|A climbing plant.
 Palm Tree|🌴|tree|medium|nature|#3fa05a|flammable|Swaying by the beach.
-Apple Tree|🍎|tree|medium|nature|#4a9a3c|flammable|Fruit for the picking.
+Apple Tree|🍎|tree|medium|food|#4a9a3c|flammable,edible|Fruit for the picking.
 Tent|⛺|building|small|structure|#e07a3a|shelter,flammable|A portable home.
 Campfire|🔥|fire|small|structure|#ff8a2a|hot,light|Warmth under the stars.
 Bonfire|🔥|fire|medium|structure|#ff6a1a|hot,light|A roaring big fire.
@@ -166,7 +166,7 @@ Time|⏳|abstract|small|concept|#c9a86a|flying|It keeps on ticking.
 Love|❤️|abstract|small|concept|#f2557a|flying|The warmest feeling.
 Music|🎵|abstract|small|concept|#7a8af2|flying|Sound arranged into joy.
 Ghost|👻|human|small|magic|#f2f2ff|flying,night|A spooky floating spirit.
-Zombie|🧟|human|small|magic|#7a9a6a|living|Shambling and hungry.
+Zombie|🧟|human|small|magic|#7a9a6a|living,predator|Shambling and hungry.
 Vampire|🧛|human|small|magic|#5a1a2a|living,night|Avoids the sun.
 Statue|🗿|decoration|medium|structure|#9a978f|heavy|A figure carved in stone.
 Fountain|⛲|decoration|medium|structure|#a8c8e0|wet,heavy|Water dancing in a basin.
@@ -185,7 +185,7 @@ Banana King|🍌|human|small|people|#f5d63a|living|Long may he peel.
 Cheese Moon|🧀|celestial|medium|space|#f5c842|night,edible|Made of cheese after all.
 Technomancer|🧙|human|small|magic|#4fd0e0|living,electric|Casts spells in code.
 Mermaid|🧜|human|small|magic|#3fbfb0|living,swimming|Half human, half fish.
-Werewolf|🐺|animal|medium|magic|#5a5560|living,night|Beware the full moon.
+Werewolf|🐺|animal|medium|magic|#5a5560|living,night,predator|Beware the full moon.
 Snowstorm|🌨️|weather|large|weather|#e6eef7|cold,wet,flying|A whirl of snow and wind.
 Hurricane|🌀|weather|huge|weather|#7a8ea8|wet,flying|A giant spinning storm.
 Oasis|🏝️|water|medium|place|#3fb0a8|wet|Water in the desert.
@@ -200,22 +200,22 @@ Sprout|🌱|plant|tiny|nature|#7ad06a|living,flammable|A plant just getting star
 Hay|🌾|object|small|material|#e6c86a|flammable,edible|Dried grass for animals.
 Blizzard|🌨️|weather|huge|weather|#eaf2fb|cold,wet,flying|A blinding snowstorm.
 Thunder|🔊|abstract|small|weather|#6a7a9a|electric,flying|The rumble after lightning.
-Electric Eel|🐍|animal|small|life|#4ab0d0|living,swimming,electric|Shocking swimmer.
+Electric Eel|🐍|animal|small|life|#4ab0d0|living,swimming,electric,aquatic|Shocking swimmer.
 Cyborg|🦾|human|small|tech|#7a8fa8|living,electric|Part human, part machine.
 Rail Car|🚃|vehicle|medium|vehicle|#3a7ac0|rideable,rails|A carriage on rails.
 Harbor|⚓|building|large|place|#6a8aa8|shelter,heavy|Where ships rest.
 Garden|🌷|plant|medium|nature|#f28ab2|flammable,edible|Flowers in neat rows.
 Jungle|🌴|tree|large|place|#2f8a3c|flammable,wet|Dense, wild and green.
-Spider|🕷️|animal|tiny|life|#3a3a3a|living|Spins silky webs.
+Spider|🕷️|animal|tiny|life|#3a3a3a|living,predator|Spins silky webs.
 Web|🕸️|decoration|small|object|#e8e8e8||Sticky silk trap.
 Owl|🦉|animal|small|life|#9a7a5a|living,flying,night|Wise watcher of the night.
 Bat|🦇|animal|tiny|life|#4a3a5a|living,flying,night|Flies by echo.
 Camel|🐫|animal|medium|life|#d4a15a|living,rideable|Ship of the desert.
 Elephant|🐘|animal|large|life|#9aa0a8|living,heavy,rideable|Never forgets.
-Lion|🦁|animal|medium|life|#e0a03a|living|King of the savanna.
+Lion|🦁|animal|medium|life|#e0a03a|living,predator|King of the savanna.
 Ant|🐜|animal|tiny|life|#4a2a1a|living|Tiny and tireless.
 Crab|🦀|animal|tiny|life|#e0503a|living,swimming,edible|Walks sideways.
-Octopus|🐙|animal|small|life|#e06a8a|living,swimming|Eight clever arms.
+Octopus|🐙|animal|small|life|#e06a8a|living,swimming,aquatic|Eight clever arms.
 Robot Dog|🐕‍🦺|machine|small|tech|#9aa7b8|electric|Good boy, batteries included.
 Spaceship|🚀|vehicle|large|space|#dfe6ee|rideable,flying|Built for the stars.
 Satellite|🛰️|celestial|small|space|#c0c8d4|electric|Orbits and listens.
@@ -233,7 +233,7 @@ Scientist|🧑‍🔬|human|small|people|#f2f2f2|living|Asks how everything work
 Doctor|🧑‍⚕️|human|small|people|#6ac0e0|living|Heals the sick.
 Baby|👶|human|tiny|people|#f2c2a2|living|Small, new, and loud.
 Peanut Butter|🥜|food|tiny|food|#c98a4a|edible|Sticky nut paste.
-Swamp Monster|🐊|animal|large|magic|#4a6a3a|living,swimming|Lurks beneath the bog.
+Swamp Monster|🐊|animal|large|magic|#4a6a3a|living,swimming,predator|Lurks beneath the bog.
 `;
 
 export const CATALOG: Map<string, ItemDef> = new Map();
