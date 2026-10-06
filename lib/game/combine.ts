@@ -47,7 +47,10 @@ export async function combineItems(aId: string, bId: string): Promise<CombineRes
   if (!a || !b) return null;
   const key = recipeKey(a.name, b.name);
 
-  const cachedId = state.recipes[key];
+  // On static hosting the built-in engine is the source of truth and is
+  // deterministic, so it is never stale: recompute instead of trusting the
+  // cache, which may hold results from an older version of the recipe table.
+  const cachedId = STATIC_EXPORT ? undefined : state.recipes[key];
   if (cachedId && state.discoveries[cachedId]) {
     sfx("combine");
     return { item: state.discoveries[cachedId], isNew: false };
