@@ -28,7 +28,7 @@ export interface ObjState {
   goalY?: number;
   pause?: number;
   occupants?: number; // building: creatures inside
-  intent?: "enter" | "ride" | "eat";
+  intent?: "enter" | "ride" | "eat" | "douse";
   targetId?: string;
 }
 

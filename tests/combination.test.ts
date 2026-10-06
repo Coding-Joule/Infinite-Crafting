@@ -126,3 +126,10 @@ test("key items are reachable from the four starters", () => {
   const unreachable = [...new Set(RECIPES.values())].filter((r) => !have.has(itemId(r)));
   console.log(`reachable: ${have.size}, unreachable recipe results: ${unreachable.join(", ") || "none"}`);
 });
+
+test("people who work with fire become firefighters that are wet", () => {
+  const ff = generateFallback({ name: "Campfire" }, { name: "Human" });
+  assert.equal(ff.name, "Campfire Firefighter");
+  assert.ok(ff.traits.includes("wet"));
+  assert.ok(CATALOG.get("firefighter")!.traits.includes("wet"));
+});

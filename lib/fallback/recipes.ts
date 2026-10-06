@@ -79,6 +79,7 @@ Human + Castle = King
 Human + Space = Astronaut
 Human + Rocket = Astronaut
 Human + Fire = Chef
+Human + Rain = Firefighter
 Human + Food = Chef
 Human + Robot = Cyborg
 Human + Electricity = Scientist

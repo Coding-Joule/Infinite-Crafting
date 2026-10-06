@@ -50,6 +50,7 @@ Wizard|🧙|human|small|magic|#6a4fc4|living|A wise wielder of magic.
 Knight|🛡️|human|small|people|#9aa3ad|living|An armored hero.
 King|🤴|human|small|people|#c9302c|living|Ruler of the realm.
 Astronaut|🧑‍🚀|human|small|people|#e8eef5|living|An explorer of space.
+Firefighter|🧑‍🚒|human|small|people|#d9452c|living,wet|Rushes in to put out fires.
 Chef|🧑‍🍳|human|small|people|#f4f4f4|living|A master of food.
 Robot|🤖|machine|small|tech|#9aa7b8|electric|A thinking machine.
 Animal|🐾|animal|small|life|#b88a5a|living|A wild creature.

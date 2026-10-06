@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import type { Discovery, ItemDef } from "../types";
 import { catalogItem, STARTER_NAMES } from "../fallback/catalog";
+import { generateFallback } from "../fallback/generateFallback";
 import { KEYS, loadJSON, saveJSON } from "./persistence";
 
 export interface BenchChip {
@@ -60,6 +61,24 @@ function starters(): Record<string, Discovery> {
   return out;
 }
 
+/**
+ * Items made by the offline engine are deterministic, so when the engine
+ * learns new behavior (e.g. firefighters become `wet`) saved copies can be
+ * refreshed by regenerating them from their recipe.
+ */
+function refreshOfflineTraits(all: Record<string, Discovery>): Record<string, Discovery> {
+  for (const d of Object.values(all)) {
+    if (!d.from) continue;
+    const [a, b] = d.from.map((id) => all[id]);
+    if (!a || !b) continue;
+    const regen = generateFallback(a, b);
+    if (regen.id !== d.id) continue;
+    const traits = Array.from(new Set([...d.traits, ...regen.traits]));
+    if (traits.length !== d.traits.length) all[d.id] = { ...d, traits };
+  }
+  return all;
+}
+
 let toastSeq = 1;
 
 export const useGame = create<GameState>((set, get) => ({
@@ -79,7 +98,7 @@ export const useGame = create<GameState>((set, get) => ({
     const saved = loadJSON<Record<string, Discovery>>(KEYS.discoveries, {});
     set({
       hydrated: true,
-      discoveries: { ...starters(), ...saved },
+      discoveries: refreshOfflineTraits({ ...starters(), ...saved }),
       recipes: loadJSON(KEYS.recipes, {}),
       favorites: loadJSON(KEYS.favorites, {}),
       settings: { muted: false, dayCycle: true, ...loadJSON<Partial<Settings>>(KEYS.settings, {}) },

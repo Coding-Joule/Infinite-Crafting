@@ -163,7 +163,7 @@ export const INTERACTION_RULES: InteractionRule[] = [
   {
     id: "flee-fire",
     a: hotSource,
-    b: creature,
+    b: and(creature, notTrait("wet")),
     mode: "near",
     range: 140,
     chance: 4,
@@ -212,6 +212,21 @@ export const INTERACTION_RULES: InteractionRule[] = [
     chance: 0.06,
     effect: (_s, a, b) => {
       a.state.intent = "eat";
+      a.state.targetId = b.id;
+      a.state.goalX = b.x;
+      a.state.goalY = b.y + 2;
+    },
+  },
+  {
+    // Wet creatures (firefighters, water spirits…) go and put fires out.
+    id: "fight-fire",
+    a: and(creature, trait("wet"), (o) => !o.state.intent),
+    b: and(onGround, (o, i) => (o.state.burning ?? 0) > 0 || (i.worldType === "fire" && !i.traits.includes("heavy"))),
+    mode: "near",
+    range: 900,
+    chance: 3,
+    effect: (_s, a, b) => {
+      a.state.intent = "douse";
       a.state.targetId = b.id;
       a.state.goalX = b.x;
       a.state.goalY = b.y + 2;

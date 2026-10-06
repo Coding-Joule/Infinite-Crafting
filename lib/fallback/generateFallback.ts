@@ -224,9 +224,11 @@ export function generateFallback(
       worldType: "human",
       category: "people",
       size: "small",
-      traits: ["living"],
+      // Someone who works with fire fights it.
+      traits: other.worldType === "fire" ? ["living", "wet"] : ["living"],
       color: mixColor(human.color, other.color, 0.6),
-      emoji: other.worldType === "animal" ? "🧑‍🌾" : other.worldType === "machine" ? "🧑‍🔧" : "🧑",
+      emoji:
+        other.worldType === "animal" ? "🧑‍🌾" : other.worldType === "machine" ? "🧑‍🔧" : other.worldType === "fire" ? "🧑‍🚒" : "🧑",
       description: `Someone who works with ${other.name.toLowerCase()}.`,
     });
   }

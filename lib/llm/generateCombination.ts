@@ -34,7 +34,7 @@ Fields:
 - size: one of ${SIZES.join(", ")} (a chicken is tiny, a human small, a house medium, a castle large, a mountain or city huge).
 - color: the main color as a #rrggbb hex string.
 - traits: 0-4 that genuinely apply, from: ${TRAITS.join(", ")}.
-  hot=can ignite, cold=freezes, wet=puts out fire, flammable=can burn, living=alive and moves, flying=lives in the air,
+  hot=can ignite, cold=freezes, wet=puts out fire (firefighters, rain, water creatures), flammable=can burn, living=alive and moves, flying=lives in the air,
   swimming=lives in water, edible=can be eaten, rideable=people can ride it, shelter=people can go inside,
   rail=a track trains run on, rails=needs tracks to move, seed=grows when watered, light=gives light,
   night=makes it dark, electric=electrical, heavy=never moves.

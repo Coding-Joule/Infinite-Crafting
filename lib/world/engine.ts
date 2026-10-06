@@ -915,6 +915,13 @@ export class WorldEngine implements Sim {
       t.state.riderId = o.id;
       t.state.riderItemId = o.itemId;
       this.sound("pop");
+    } else if (intent === "douse") {
+      this.emit(t.x, t.y - 30, "drop", 10, "#8fc8ff");
+      this.emit(t.x, t.y - 30, "puff", 6, "#e6edf3");
+      this.sound("splash");
+      if ((t.state.burning ?? 0) > 0) t.state.burning = 0;
+      else if (this.item(t)?.worldType === "fire") this.removeById(t.id);
+      st.pause = 0.6;
     } else if (intent === "eat") {
       this.emit(t.x, t.y - 20, "heart", 1, "#ff6b8a");
       this.sound("munch");
