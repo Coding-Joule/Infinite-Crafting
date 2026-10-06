@@ -29,6 +29,10 @@ export default function Game() {
         g.addBenchChip("air", 0.8, 0.45);
       }
     }
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT === "true") {
+      useGame.getState().setAiEnabled(false);
+      return;
+    }
     fetch("/api/status")
       .then((r) => r.json())
       .then((d: { ai: boolean }) => useGame.getState().setAiEnabled(!!d.ai))

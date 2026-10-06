@@ -14,6 +14,14 @@ npm run dev                  # http://localhost:3000
 
 Other scripts: `npm run build`, `npm start`, `npm run typecheck`, `npm test`.
 
+### GitHub Pages
+
+Every push to `main` deploys a static build to GitHub Pages (`.github/workflows/pages.yml`).
+Pages can't run server code, so that build uses the built-in combination engine in the browser.
+For AI combinations, host the full app somewhere that runs Node (e.g. Vercel) with `LLM_API_KEY` set.
+
+One-time setup: **Settings → Pages → Source: GitHub Actions**.
+
 ### The AI combination engine (optional)
 
 An LLM decides what two things make. All API calls happen server-side in `app/api/combine`, and the key is never sent to the browser.

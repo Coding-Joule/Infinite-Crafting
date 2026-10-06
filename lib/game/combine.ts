@@ -14,7 +14,11 @@ export interface CombineResult {
 
 const inflight = new Map<string, Promise<ItemDef>>();
 
+const STATIC_EXPORT = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true";
+
 async function fetchCombination(a: Discovery, b: Discovery): Promise<ItemDef> {
+  // Static hosting (GitHub Pages) has no server: combine locally.
+  if (STATIC_EXPORT) return generateFallback(a, b);
   try {
     const res = await fetch("/api/combine", {
       method: "POST",
